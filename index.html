@@ -372,17 +372,18 @@
       box-shadow: 0 0 0 1px rgba(148,163,184,0.7);
     }
 
-    .slide-main-text {
-      font-weight: 800;
-      line-height: 1.25;
-      flex: 1;
-      width: 100%;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      text-align: left;
-      padding: 0 4px;
-    }
+ .slide-main-text {
+  font-weight: 800;
+  line-height: 1.25;
+  flex: 1;
+  width: 100%;
+  display: flex;                 /* necessário */
+  flex-direction: column;        /* coloca parágrafos um abaixo do outro */
+  justify-content: center;       /* centraliza verticalmente */
+  align-items: flex-start;       /* alinha tudo à esquerda */
+  text-align: left;              /* garante alinhamento do texto */
+  padding: 0 4px;
+}
 
     .slide-main-text p {
       margin: 0;
@@ -398,7 +399,7 @@
       min-height: 20px;
     }
 
-    /* Botão de baixar apenas 1 slide */
+    /* Botão para baixar só um slide */
     .single-download {
       margin-top: 6px;
       padding: 6px 12px;
@@ -467,11 +468,11 @@
             Conteúdo dos slides
           </div>
           <p class="panel-helper">
-            Cada linha será transformada em um slide. Máximo de 10 slides por vez.
+            Cada bloco separado por <strong>3 "enters"</strong> será um slide. 1 ou 2 "enters" viram parágrafo dentro do mesmo slide. Máximo de 10 slides.
           </p>
 
-          <label>Textos dos slides (1 por linha)</label>
-          <textarea id="slidesText" placeholder="Slide 1&#10;Slide 2&#10;Slide 3... (máx. 10)"></textarea>
+          <label>Textos dos slides (use 3 enters para mudar de slide)</label>
+          <textarea id="slidesText" placeholder="Texto do slide 1&#10;&#10;&#10;Texto do slide 2&#10;&#10;&#10;Texto do slide 3... (máx. 10)"></textarea>
 
           <div class="actions-row">
             <button class="btn-primary" id="generateBtn">
@@ -502,12 +503,15 @@
           <label>Nome</label>
           <input id="authorName" type="text" placeholder="Seu nome">
 
-          <label>Rodapé</label>
+          <label>Rodapé (padrão para todos)</label>
           <input id="footerText" type="text" value="Segue →">
+
+          <label>Rodapés por slide (opcional, 1 por linha)</label>
+          <textarea id="footersText" placeholder="Linha 1 = slide 1&#10;Linha 2 = slide 2&#10;Linha 3 = slide 3..."></textarea>
 
           <div class="field-row">
             <div>
-              <label>Tamanho da Fonte</label>
+              <label>Tamanho da Fonte do Texto</label>
               <input id="fontSize" type="number" value="22">
             </div>
             <div>
@@ -516,7 +520,6 @@
             </div>
           </div>
 
-          <!-- NOVOS CAMPOS: tamanho do @ e do nome -->
           <div class="field-row">
             <div>
               <label>Tam. @ Perfil</label>
@@ -560,7 +563,7 @@
       if (file) uploadedImageURL = URL.createObjectURL(file);
     });
 
-    // Agora recebe também profileFontSize e authorFontSize
+    // Agora recebe também tamanhos de @ e nome
     function createSlide(
       text,
       index,
@@ -616,10 +619,18 @@
       main.className = 'slide-main-text';
       main.style.fontSize = fontSize + "px";
 
-      const p = document.createElement('p');
-      p.textContent = text;
-
-      main.appendChild(p);
+      // Permitir vários parágrafos dentro do mesmo slide
+      const paragraphs = text.split(/\n{1,}/);
+      paragraphs.forEach((part, idx) => {
+        const trimmed = part.trim();
+        if (!trimmed) return;
+        const p = document.createElement('p');
+        p.textContent = trimmed;
+        if (idx < paragraphs.length - 1) {
+          p.style.marginBottom = "6px";
+        }
+        main.appendChild(p);
+      });
 
       const footerBox = document.createElement('div');
       footerBox.className = 'slide-footer';
@@ -634,7 +645,7 @@
 
       wrapper.appendChild(slide);
 
-      // NOVO: botão para baixar apenas este slide
+      // Botão para baixar só este slide
       const singleBtn = document.createElement('button');
       singleBtn.className = 'btn-secondary single-download';
       singleBtn.textContent = '⬇ Baixar este';
@@ -662,37 +673,50 @@
       const slidesContainer = document.getElementById('slidesContainer');
       slidesContainer.innerHTML = "";
 
-      const rawLines = document.getElementById('slidesText').value
-        .split("\n").map(t => t.trim()).filter(t => t !== "");
+      const rawText = document.getElementById('slidesText').value.replace(/\r\n/g, "\n");
 
-      if (rawLines.length === 0) {
-        alert("Digite pelo menos 1 slide.");
+      // 3 enters (3 ou mais \n) = novo slide
+      let chunks = rawText
+        .split(/\n{3,}/)
+        .map(s => s.trim())
+        .filter(s => s !== "");
+
+      if (chunks.length === 0) {
+        alert("Digite pelo menos o texto de 1 slide.");
         return;
       }
 
-      let lines = rawLines.slice(0, 10);
+      let lines = chunks.slice(0, 10);
 
       const profile   = document.getElementById('profileName').value;
       const author    = document.getElementById('authorName').value;
-      const footer    = document.getElementById('footerText').value;
+      const footerPadrao = document.getElementById('footerText').value;
       const fontSize  = document.getElementById('fontSize').value;
       const fontColor = document.getElementById('fontColor').value;
       const bgColor   = document.getElementById('bgColor').value;
 
-      // Novos tamanhos
       const profileFontSize = document.getElementById('profileFontSize').value || "13";
       const authorFontSize  = document.getElementById('authorFontSize').value || "11";
+
+      // Rodapés por slide (opcional)
+      const rawFooters = document.getElementById('footersText').value.replace(/\r\n/g, "\n");
+      const footersList = rawFooters.split("\n").map(t => t.trim());
 
       const totalSlides = lines.length;
 
       lines.forEach((line, i) => {
+        const footerThis =
+          footersList[i] && footersList[i] !== ""
+            ? footersList[i]
+            : footerPadrao;
+
         const slideEl = createSlide(
           line,
           i,
           totalSlides,
           profile,
           author,
-          footer,
+          footerThis,
           fontSize,
           fontColor,
           bgColor,
