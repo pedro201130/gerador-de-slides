@@ -18,7 +18,6 @@
       --text-main: #e5e7eb;
       --text-muted: #9ca3af;
       --chip-bg: #0f172a;
-      
     }
 
     * {
@@ -399,6 +398,13 @@
       min-height: 20px;
     }
 
+    /* Botão de baixar apenas 1 slide */
+    .single-download {
+      margin-top: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+
     @media (max-width: 960px) {
       .config {
         grid-template-columns: minmax(0, 1fr);
@@ -510,6 +516,18 @@
             </div>
           </div>
 
+          <!-- NOVOS CAMPOS: tamanho do @ e do nome -->
+          <div class="field-row">
+            <div>
+              <label>Tam. @ Perfil</label>
+              <input id="profileFontSize" type="number" value="13">
+            </div>
+            <div>
+              <label>Tam. Nome</label>
+              <input id="authorFontSize" type="number" value="11">
+            </div>
+          </div>
+
           <label>Cor do Fundo do Slide</label>
           <input id="bgColor" type="color" value="#000000">
 
@@ -542,7 +560,20 @@
       if (file) uploadedImageURL = URL.createObjectURL(file);
     });
 
-    function createSlide(text, index, totalSlides, profile, author, footer, fontSize, fontColor, bgColor) {
+    // Agora recebe também profileFontSize e authorFontSize
+    function createSlide(
+      text,
+      index,
+      totalSlides,
+      profile,
+      author,
+      footer,
+      fontSize,
+      fontColor,
+      bgColor,
+      profileFontSize,
+      authorFontSize
+    ) {
       const wrapper = document.createElement('div');
 
       const slide = document.createElement('div');
@@ -569,11 +600,12 @@
       const p1 = document.createElement('div');
       p1.textContent = profile;
       p1.style.fontWeight = "700";
+      p1.style.fontSize = profileFontSize + "px";
 
       const p2 = document.createElement('div');
       p2.textContent = author;
-      p2.style.fontSize = "11px";
       p2.style.fontWeight = "500";
+      p2.style.fontSize = authorFontSize + "px";
 
       textBox.appendChild(p1);
       textBox.appendChild(p2);
@@ -601,6 +633,15 @@
       slide.appendChild(footerBox);
 
       wrapper.appendChild(slide);
+
+      // NOVO: botão para baixar apenas este slide
+      const singleBtn = document.createElement('button');
+      singleBtn.className = 'btn-secondary single-download';
+      singleBtn.textContent = '⬇ Baixar este';
+      singleBtn.addEventListener('click', () => {
+        downloadSlide(slide, index);
+      });
+      wrapper.appendChild(singleBtn);
 
       return wrapper;
     }
@@ -638,13 +679,25 @@
       const fontColor = document.getElementById('fontColor').value;
       const bgColor   = document.getElementById('bgColor').value;
 
+      // Novos tamanhos
+      const profileFontSize = document.getElementById('profileFontSize').value || "13";
+      const authorFontSize  = document.getElementById('authorFontSize').value || "11";
+
       const totalSlides = lines.length;
 
       lines.forEach((line, i) => {
         const slideEl = createSlide(
-          line, i, totalSlides,
-          profile, author, footer,
-          fontSize, fontColor, bgColor
+          line,
+          i,
+          totalSlides,
+          profile,
+          author,
+          footer,
+          fontSize,
+          fontColor,
+          bgColor,
+          profileFontSize,
+          authorFontSize
         );
         slidesContainer.appendChild(slideEl);
       });
